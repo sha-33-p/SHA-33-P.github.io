@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>大麦抢票助手</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(160deg, #1a1140, #2d1b69 60%, #ff3d8b);
+    color: #fff; min-height: 100vh; padding: 16px;
+    padding-bottom: 90px; max-width: 560px; margin: 0 auto;
+  }
+  header { text-align: center; padding: 12px 0 18px; }
+  header h1 { font-size: 22px; font-weight: 700; }
+  header p { font-size: 12px; opacity: .8; margin-top: 6px; }
+  .card {
+    background: rgba(255,255,255,.08); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,.15); border-radius: 16px;
+    padding: 16px; margin-bottom: 14px;
+  }
+  .card h2 { font-size: 15px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+  label { display: block; font-size: 13px; opacity: .9; margin-bottom: 4px; }
+  input, select {
+    width: 100%; padding: 11px 12px; border-radius: 10px; border: none;
+    background: rgba(0,0,0,.25); color: #fff; font-size: 14px; margin-bottom: 12px;
+  }
+  input::placeholder { color: rgba(255,255,255,.45); }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 6px 0 12px; }
+  .check input { width: auto; margin: 0; }
+  button {
+    width: 100%; padding: 14px; border: none; border-radius: 12px;
+    font-size: 15px; font-weight: 600; color: #fff; cursor: pointer;
+  }
+  .primary { background: linear-gradient(90deg, #ff3d8b, #ff6a3d); }
+  .ghost { background: rgba(255,255,255,.15); }
+  .danger { background: #b71c1c; }
+  .btns { display: flex; gap: 10px; }
+  .btns button { flex: 1; }
+  .countdown {
+    text-align: center; font-size: 40px; font-weight: 800; letter-spacing: 2px;
+    font-variant-numeric: tabular-nums; padding: 10px 0;
+  }
+  .cd-label { text-align: center; font-size: 12px; opacity: .8; }
+  .stage { text-align: center; font-size: 13px; opacity: .9; margin-top: 6px; }
+  #log {
+    height: 160px; overflow-y: auto; background: rgba(0,0,0,.3);
+    border-radius: 10px; padding: 10px; font-size: 12px; line-height: 1.6;
+    font-family: ui-monospace, monospace;
+  }
+  .log-line { margin-bottom: 4px; }
+  .log-line.success { color: #6ee7a0; }
+  .log-line.warn { color: #ffd166; }
+  .log-line.error { color: #ff7b7b; }
+  .log-line.step { color: #7ec8ff; }
+  .hint { font-size: 11px; opacity: .7; line-height: 1.5; margin-top: 8px; }
+  .bottom-fixed {
+    position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px;
+    background: rgba(20,12,48,.95); border-top: 1px solid rgba(255,255,255,.1);
+  }
+  .bottom-fixed button { max-width: 560px; margin: 0 auto; display: block; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; background: rgba(255,255,255,.15); }
+  .pill.on { background: #1b5e20; }
+  .grab-box { background: rgba(91,44,255,.15); border: 1px solid rgba(123,200,255,.3); border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎫 大麦抢票助手</h1>
+  <p>手机本地运行 · 安卓 / 华为通用 · 账号仅存本机</p>
+</header>
+
+<!-- 账号 -->
+<div class="card">
+  <h2>👤 大麦账号（本机加密保存）</h2>
+  <label>手机号 / 账号</label>
+  <input id="username" placeholder="用于自动登录，仅存本机" />
+  <label>密码</label>
+  <input id="password" type="password" placeholder="本机加密，不上传任何服务器" />
+  <div class="check"><input type="checkbox" id="saveAcc" checked /><span>记住账号（加密存储于本机 localStorage）</span></div>
+  <div class="hint">安全说明：本工具无任何后端服务器，所有数据只存在你这部手机里。大麦登录若遇验证码需手动完成。</div>
+</div>
+
+<!-- 抢票配置 -->
+<div class="card">
+  <h2>🎯 抢票配置</h2>
+
+  <!-- 自动抓取区 -->
+  <div class="grab-box">
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px">① 自动获取（在大麦详情页点书签）</div>
+    <p class="hint">在手机/电脑浏览器打开大麦<b>演出详情页</b>，点击书签栏的「抓取大麦信息」，场次/票档/开售时间会自动回填到下方下拉框。</p>
+    <div class="row" style="align-items:center">
+      <span class="pill" id="grabState">未抓取</span>
+      <button class="ghost" id="copyBookmark" style="flex:1">复制抓取书签</button>
+    </div>
+    <p class="hint">书签代码也可在此查看：<span id="bmCode" style="word-break:break-all;opacity:.6"></span></p>
+  </div>
+
+  <label>演出链接 / Deep Link</label>
+  <input id="showUrl" placeholder="点书签后自动填入，或手动粘贴" />
+
+  <div class="row">
+    <div>
+      <label>场次</label>
+      <select id="session">
+        <option value="">— 点书签自动获取 —</option>
+      </select>
+    </div>
+    <div>
+      <label>票档</label>
+      <select id="priceTier">
+        <option value="">— 点书签自动获取 —</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label>购买数量</label>
+      <input id="quantity" type="number" min="1" max="6" value="1" />
+    </div>
+    <div>
+      <label>观看人</label>
+      <input id="recipient" placeholder="已实名观看人（手填，可记多个）" />
+    </div>
+  </div>
+  <label>开售时间</label>
+  <input id="saleTime" type="datetime-local" />
+  <div class="check"><input type="checkbox" id="autoPay" checked /><span>锁定门票后自动选支付工具并点击「去支付」，由本人完成最终付款（不自动跳App/不自动输密）</span></div>
+  <label>支付工具（锁定后切换）</label>
+  <select id="payMethod">
+    <option value="支付宝">支付宝</option>
+    <option value="微信">微信支付</option>
+    <option value="银行卡">银行卡</option>
+    <option value="花呗">花呗</option>
+    <option value="">不指定（用默认）</option>
+  </select>
+  <button class="ghost" id="saveBtn">保存配置</button>
+</div>
+
+<!-- 倒计时与控制台 -->
+<div class="card">
+  <h2>⏱ 控制台</h2>
+  <div class="cd-label">距开售</div>
+  <div class="countdown" id="countdown">--:--:--</div>
+  <div class="stage" id="stage">状态：空闲 <span class="pill" id="autoPayPill">去支付:关</span></div>
+  <div class="btns" style="margin-top:10px">
+    <button class="primary" id="startBtn">▶ 开始抢票</button>
+    <button class="danger" id="abortBtn">■ 中止</button>
+  </div>
+</div>
+
+<!-- 日志 -->
+<div class="card">
+  <h2>📜 实时日志</h2>
+  <div id="log"></div>
+</div>
+
+<div class="bottom-fixed">
+  <button class="primary" id="openBtn">在浏览器中打开大麦购票页</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
